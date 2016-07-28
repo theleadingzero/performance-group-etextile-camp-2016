@@ -13,9 +13,10 @@
  *              1 - nothing
  *              2 - set
  *              3 - release
- *   outputs-3: handles bell trigger
+ *   outputs-3: handles sample triggers
  *              1 - nothing
- *              2 - trigger
+ *              2 - trigger bell
+ *              3 - trigger vibraslap
  */
 
 
@@ -49,9 +50,7 @@ void setup()
   // set up audio
   violin = minim.loadFile("violin.wav");
   bells = minim.loadSample("bells.wav");
-  bells.setVolume(0.7);
   vibra = minim.loadSample("vibraslap.wav");
-  vibra.setGain(0.4);
 
   // load font
   textFont(loadFont("ArialMT-14.vlw"));
