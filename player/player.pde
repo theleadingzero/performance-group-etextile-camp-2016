@@ -2,6 +2,20 @@
  * Player for E-Textile Skirt
  * by Becky Stewart
  * E-Textile Summer Camp 2016
+ *  
+ * Watches for 5 Outputs from Wekinator
+ *   - each output has 5 classifications
+ *   
+ *   outputs-1: handles violin macro start/stop
+ *              1 - start
+ *              2 - stop
+ *   outputs-2: handles violin loop set/release
+ *              1 - nothing
+ *              2 - set
+ *              3 - release
+ *   outputs-3: handles bell trigger
+ *              1 - nothing
+ *              2 - trigger
  */
 
 
@@ -20,18 +34,36 @@ AudioSample bells;
 int loopBegin;
 int loopEnd;
 
+// debounce timers
+long lastStart = 0;
+long lastStop = 0;
+
 void setup()
 {
   // set up window
   size(512, 200, P3D);
   minim = new Minim(this);
-  
+
   // set up audio
   violin = minim.loadFile("violin.wav");
   bells = minim.loadSample("bells.wav");
   bells.setVolume(0.7);
 
+  // load font
   textFont(loadFont("ArialMT-14.vlw"));
+
+  // set up OSC
+  // start oscP5, listening for incoming messages at port 12000 
+  oscP5 = new OscP5(this, 12000);
+
+  /* myRemoteLocation is a NetAddress. a NetAddress takes 2 parameters,
+   * an ip address and a port number. myRemoteLocation is used as parameter in
+   * oscP5.send() when sending osc packets to another computer, device, 
+   * application. usage see below. for testing purposes the listening port
+   * and the port of the remote location address are the same, hence you will
+   * send messages back to this sketch.
+   */
+  myRemoteLocation = new NetAddress("127.0.0.1", 12000);
 }
 
 void draw()
@@ -94,24 +126,28 @@ void keyPressed()
 }
 
 void startViolin() {
-  // check if not playing
-  if ( !violin.isPlaying()) {
+  // check if not playing and debounce
+  if ( !violin.isPlaying() && ((millis() - lastStart) > 1500) ) {
     // start audio
     violin.loop();
+    lastStart = millis();
   }
 }
 
 void stopViolin() {
-  violin.pause();
+  // debounce
+  if ( (millis() - lastStop) > 1500 ) {
+    violin.pause();
+  }
 }
 
 void setLoop() {
   // set loop points to right now
   // and N seconds before now
   // check more than N into audio file
-  if ( violin.position() > 1800 ) {
+  if ( violin.position() > 1000 ) {
     println("setting loop points");
-    violin.setLoopPoints((violin.position() - 1800), violin.position()+30 );
+    violin.setLoopPoints((violin.position() - 1000), violin.position()+30 );
     //violin.loop();
   }
 }
@@ -123,4 +159,38 @@ void releaseLoop() {
 
 void playBells() {
   bells.trigger();
+}
+
+
+void oscEvent(OscMessage theOscMessage) {
+  // check if theOscMessage has the address pattern we are looking for
+
+  if (theOscMessage.checkAddrPattern("/wek/outputs") == true) {
+    /* check if the typetag is the right one. */
+    if (theOscMessage.checkTypetag("fffff")) {
+      // parse theOscMessage 
+      float firstValue = theOscMessage.get(0).floatValue();  
+      float secondValue = theOscMessage.get(1).floatValue();
+      float thirdValue = theOscMessage.get(2).floatValue();
+      float fourthValue = theOscMessage.get(3).floatValue();
+      float fifthValue = theOscMessage.get(4).floatValue();
+      println(" values: " + firstValue + ", " + secondValue + ", " + thirdValue + ", " + thirdValue + ", " + fourthValue + ", " + fifthValue);
+
+      // start violin
+      if ( firstValue == 1 ) startViolin();
+      // stop violin
+      if ( firstValue == 2 ) stopViolin();
+
+      // drop loop
+      if ( secondValue == 2) setLoop();
+      // release loop
+      if ( secondValue == 3) setLoop();
+
+      // trigger bells
+      if ( firstValue == 2 ) playBells();
+      return;
+    }
+  } 
+  println("### received an osc message. with address pattern "+theOscMessage.addrPattern());
+  println(theOscMessage.typetag());
 }
