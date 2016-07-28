@@ -27,9 +27,11 @@ NetAddress myRemoteLocation;
 
 import ddf.minim.*;
 
+// audio variables
 Minim minim;
 AudioPlayer violin;
 AudioSample bells;
+AudioSample vibra;
 
 int loopBegin;
 int loopEnd;
@@ -48,6 +50,8 @@ void setup()
   violin = minim.loadFile("violin.wav");
   bells = minim.loadSample("bells.wav");
   bells.setVolume(0.7);
+  vibra = minim.loadSample("vibraslap.wav");
+  vibra.setGain(0.4);
 
   // load font
   textFont(loadFont("ArialMT-14.vlw"));
@@ -86,20 +90,6 @@ void draw()
   line(lex, 0, lex, height);
 }
 
-void mousePressed()
-{
-  int ms = (int)map(mouseX, 0, width, 0, violin.length());
-  if ( mouseButton == RIGHT )
-  {
-    violin.setLoopPoints(loopBegin, ms);
-    loopEnd = ms;
-  } else
-  {
-    violin.setLoopPoints(ms, loopEnd);
-    loopBegin = ms;
-  }
-}
-
 void keyPressed()
 {
   switch (key) {
@@ -121,6 +111,10 @@ void keyPressed()
 
   case 'b':
     playBells();
+    break;
+    
+    case 'v':
+    playVibraslap();
     break;
   }
 }
@@ -161,6 +155,10 @@ void playBells() {
   bells.trigger();
 }
 
+void playVibraslap() {
+  vibra.trigger();
+}
+
 
 void oscEvent(OscMessage theOscMessage) {
   // check if theOscMessage has the address pattern we are looking for
@@ -186,8 +184,9 @@ void oscEvent(OscMessage theOscMessage) {
       // release loop
       if ( secondValue == 3) setLoop();
 
-      // trigger bells
-      if ( firstValue == 2 ) playBells();
+      // trigger samples
+      if ( thirdValue == 2 ) playBells();
+      if ( thirdValue == 3 ) playVibraslap();
       return;
     }
   } 
